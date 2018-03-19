@@ -1,12 +1,18 @@
 package com.willowtreeapps;
 
 import org.assertj.swing.assertions.Assertions;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
+import org.junit.Assert;
+import org.openqa.selenium.*;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.FluentWait;
 
+
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 /**
  * Created on 5/23/17.
@@ -96,4 +102,110 @@ public class BasePage {
         }
     }
 
+    //________________________________________________________________________________________________//
+
+    //opens the main page and waits for the page to be loaded;
+    public void open(String URL) {
+        driver.get(URL);
+        sleep(5000);
+    }
+
+    //fluent wait for element to be clickable;
+    public void waitForElementToBeClickable(WebElement element) {
+        new FluentWait<WebDriver>(driver).withTimeout(30, TimeUnit.SECONDS)
+                .pollingEvery(3, TimeUnit.SECONDS)
+                .ignoring(NoSuchElementException.class)
+                .ignoring(StaleElementReferenceException.class)
+                .until(ExpectedConditions.elementToBeClickable(element));
+    }
+
+    //clicking on the clickable element;
+    public void clickElement(WebElement element) {
+        waitForElementToBeClickable(element);
+        element.click();
+    }
+
+    //method, that returns the index of correct element;
+    public int indexOfCorrectElement(By requestedName, By listOfNames) {
+
+        WebElement element = driver.findElement(requestedName);
+        List<WebElement> list = driver.findElements(listOfNames);
+        for (int i = 0; i < list.size(); i++) {
+            if (element.getText().equals(list.get(i).getText())) {
+                return list.indexOf(list.get(i));
+            }
+        }
+        return 0;
+    }
+
+    //method, that returns the index of the wrong element;
+    public int indexOfWrongElement(By requestedName, By listOfNames) {
+
+        WebElement element = driver.findElement(requestedName);
+        List<WebElement> list = driver.findElements(listOfNames);
+        for (int i = 0; i < list.size(); i++) {
+            if (!element.getText().equals(list.get(i).getText())) {
+                return list.indexOf(list.get(i));
+            }
+        }
+        return 0;
+    }
+
+    //clicking on correct element;
+    public void clickOnCorrectElement(By requestedName, By listOfNames, By listOfPhotos) {
+
+        List<WebElement> list = driver.findElements(listOfPhotos);
+        int correctIndex = indexOfCorrectElement(requestedName, listOfNames);
+        clickElement(list.get(correctIndex));
+
+    }
+
+    //clicking on wrong element;
+    public void clickOnWrongElement(By requestedName, By listOfNames, By listOfPhotos) {
+
+        List<WebElement> list = driver.findElements(listOfPhotos);
+        int wrongIndex = indexOfWrongElement(requestedName, listOfNames);
+        clickElement(list.get(wrongIndex));
+    }
+
+    //repeats correct selection repNum times;
+    public void repeatCorrectSelection(By requestedName, By listOfNames, By listOfPhotos, int repNum) {
+        for (int i = 0; i < repNum; i++) {
+            clickOnCorrectElement(requestedName, listOfNames, listOfPhotos);
+            sleep(6000);
+        }
+    }
+
+    //validfation of planed and actual counter;
+    public BasePage counterAssertion(int num, By by) {
+        int counterPlan = num;
+        int counterActual = Integer.parseInt(driver.findElement(by).getText());
+        Assert.assertEquals(counterPlan, counterActual);
+        return this;
+
+    }
+
+    //random 10 times selection;
+    public void clickRandomSelectionWithAssertions(By listOfPhotos, By triesCounter, By correctCounter) {
+        int attempts = 0;
+        int correctPlan = 0;
+        while (attempts < 10) {
+            sleep(1000);
+            List<WebElement> list = driver.findElements(listOfPhotos);
+            Random random = new Random();
+            int index = random.nextInt(5);
+            clickElement(list.get(index));
+            String class_name = list.get(index).getAttribute("class");
+            attempts = Integer.parseInt(driver.findElement(triesCounter).getText());
+            if (class_name.contains("photo correct")) {
+                sleep(3000);
+                correctPlan += 1;
+            }
+        }
+        sleep(1000);
+        counterAssertion(10, triesCounter);
+        counterAssertion(correctPlan, correctCounter);
+    }
 }
+
+
